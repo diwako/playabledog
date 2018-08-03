@@ -9,3 +9,4 @@ E and Q do nothing so far, trying to get leaping to work but ~arma's a bitch~ ab
 Other players can interact and pet the doggo because everyone in my unit requested this\
 Yes the dog can change tires, I call it a feature
 
+I am uploading it her in case someone might think this is interesting and also want to help me with this, but who am I kidding.
