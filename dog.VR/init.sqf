@@ -1,0 +1,1 @@
+[] call diwako_playabledog_fnc_init;
