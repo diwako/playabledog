@@ -1,1 +1,1 @@
-[] call diwako_playabledog_fnc_init;
+// [] call diwako_playabledog_fnc_init;

@@ -1,3 +1,5 @@
+if(!isNil "diwako_dogInit") exitWith {};
+
 if(isNil "MISSION_ROOT") then {
   if(isDedicated) then {
   MISSION_ROOT = "mpmissions\__CUR_MP." + worldName + "\";
