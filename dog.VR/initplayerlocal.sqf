@@ -1,3 +1,4 @@
 if(player == yoo) then {
-	[] call diwako_playabledog_fnc_becomeDog;
+	["random", asd] call diwako_playabledog_fnc_becomeDog;
 };
+// selectPlayer asd;

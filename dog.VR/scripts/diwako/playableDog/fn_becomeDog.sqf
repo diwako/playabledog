@@ -1,16 +1,19 @@
 if(!hasInterface) exitWith {};
-params[["_type","random"],["_allowNvg",true]];
+params[["_type","random"],["_owner",objNull],["_allowNvg",true]];
 waitUntil { !isNil 'diwako_dogInit' };
 camDestroy (missionnamespace getVariable ["personalCam",objNull]);
 oldPlayer = player;
 doggo = (group player) createUnit ["ALSATIAN_BLACK_F", position player, [], 0, "FORM"];
 // doggo = (createGroup [east, true]) createUnit ["ALSATIAN_BLACK_F", position player, [], 0, "FORM"];
-addSwitchableUnit doggo; selectPlayer doggo;
+addSwitchableUnit doggo;
+selectPlayer doggo;
+doggo setVariable ["BIS_fnc_animalBehaviour_disable", true, true];
 personalCam = "camera" camCreate (position player);
 personalCam attachTo [doggo, [0,-1.5,1.25]];
 // personalCam attachTo [doggo, [0,0.3,0],"head"];
 switchCamera personalCam;
 doggo enableStamina false;
+doggo setVariable ["diwako_dog_owner",_owner,true];
 
 doggo addEventHandler ["Killed",{
   params ["_unit", "_killer", "_instigator", "_useEffects"];
@@ -23,11 +26,11 @@ doggo addEventHandler ["Killed",{
       visoreh = nil;
     };
     if(!isNil "diw_dog_mouse_eh") then {
-      removeMissionEventHandler ["MouseButtonDown",diw_dog_mouse_eh];
+      (findDisplay 46) displayRemoveEventHandler ["MouseButtonDown",diw_dog_mouse_eh];
       diw_dog_mouse_eh = nil;
     };
     if(!isNil "diw_dog_key_eh") then {
-      removeMissionEventHandler ["KeyDown",diw_dog_key_eh];
+      (findDisplay 46) displayRemoveEventHandler ["KeyDown",diw_dog_key_eh];
       diw_dog_key_eh = nil;
     };
     player enableStamina true;
@@ -44,23 +47,23 @@ doggo addEventHandler ["Killed",{
 [{
   doggo removeAllEventHandlers "HandleDamage";
   doggo addEventHandler ["HandleDamage",{
-    private _dog = _this select 0;
-    if(!alive _dog) exitWith {};
-    private _source	= _this select 3;
-    private _projectile = _this select 4;
-    private _hits = _dog getVariable ["diw_dog_hit",0];
-    if ((_projectile != '') and !(isnull _source )) then {
-      _hits = _hits + 1;
-      if (_hits > diw_dog_max_hit) then {
-              _dog setdamage 1;
-          };
-      if((alive _dog) && ((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time)) then {
-        diw_dogBark = time + 1.5  + (random 1);
-        [_dog, "hurt_" + str( (floor random 2) + 1 )] remoteExec ["say3D"];
-      };
-      _dog setVariable ["diw_dog_hit",_hits,true];
-    };
-    0
+    params ["_dog", "_selection", "_damage", "_source", "_projectile", "_hitIndex", "_instigator", "_hitPoint"];
+    if!(alive _dog) exitWith {1};
+    // systemChat str _this;
+    // if ((_projectile != '')) then { //and !(isnull _source )) then {
+    //   private _hits = _dog getVariable ["diw_dog_hit",0];
+    //   _hits = _hits + 1;
+    //   if (_hits > diw_dog_max_hit) then {
+    //           _dog setdamage 1;
+    //       };
+    //   if((alive _dog) && ((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time)) then {
+    //     diw_dogBark = time + 1.5  + (random 1);
+    //     [_dog, "hurt_" + str( (floor random 2) + 1 )] remoteExec ["say3D"];
+    //   };
+    //   _dog setVariable ["diw_dog_hit",_hits,true];
+    // };
+    // 0
+    (damage _dog + (_damage / 50));
   }];
   systemChat "damage handler applied";
 },[],2] call CBA_fnc_waitAndExecute;
@@ -138,13 +141,24 @@ diw_dog_mouse_eh = (findDisplay 46) displayAddEventHandler ["MouseButtonDown", {
 diw_dog_key_eh = (findDisplay 46) displayAddEventHandler ["KeyDown", {
   if!(player isKindOf 'Dog_Base_F') exitWith {};
   params ["_control", "_key", "_shift", "_ctrl", "_alt"];
-  // e
-  if(_key == 18) exitWith {
+  if(_key in actionKeys "nightVision" && {doggo getVariable ["diwako_dog_allowNvg", false] && {(missionNamespace getVariable ["diwako_dog_nvg_time",(time-0.5)]) < time}}) then {
+    if(isNil "diwako_dog_nvg") then {
+      diwako_dog_nvg = false;
+    };
+    // epilepsi begone, kind of
+    diwako_dog_nvg_time = time + 0.5;
+    diwako_dog_nvg = !diwako_dog_nvg;
+    camUseNVG diwako_dog_nvg;
+    playSound "RscDisplayCurator_visionMode";
+  };
 
+  // e
+  if(_key == 18) then {
+    player setPosATL (player modelToWorld [0,1,0]);
   };
 
   // q
-  if(_key == 16) exitWith {
+  if(_key == 16) then {
 
   };
 }];
@@ -156,6 +170,7 @@ visorMines = [];
   while {player isKindOf "Dog_Base_F"} do {
     private _men = entities  [["CAManBase"], [], true, false];
     visorTargets = _men select { (player distance _x) < 300};
+    visorTargets = visorTargets - [(player getVariable ["diwako_dog_owner",objNull])];
     visorMines = allMines select { (player distance2D _x) <= 25};
     sleep 5;
   };
@@ -225,23 +240,17 @@ _action = ["diw_turn_on_smellovision","Enable Smell-o-Vison","",{
       drawIcon3D ["\A3\ui_f\data\map\vehicleicons\iconExplosiveAP_ca.paa", [1,0,0,1], _posIcon, 1, 1, 0, "Explosive"];
       false
     } count visorMines;
+    if!(isNull (player getVariable ["diwako_dog_owner",objNull])) then {
+      private _owner = player getVariable "diwako_dog_owner";
+      _posIcon = _owner modelToWorldVisual (_owner selectionPosition "pelvis");
+      drawIcon3D ["\A3\ui_f\data\map\markers\military\triangle_CA.paa", [0,1,0,1], _posIcon, 0.5, 0.5, 0, "Owner"];
+    };
   }];
 },{isNil 'visoreh' && !(player getVariable["diwako_dog_inVehicle",false])}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
-if(_allowNvg) then {
-  _action = ["diw_dog_toggleNVG","Toggle NVGs","",{
-    if(isNil "diwako_dog_nvg") then {
-      diwako_dog_nvg = false;
-    };
-    diwako_dog_nvg = !diwako_dog_nvg;
-    camUseNVG diwako_dog_nvg;
-    playSound "RscDisplayCurator_visionMode";
-  },{true}] call ace_interact_menu_fnc_createAction;
-
-  [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
-};
+doggo setVariable ["diwako_dog_allowNvg",_allowNvg];
 
 _action = ["diw_dog_fixcamera","Fix camera","",{
   switchCamera player;

@@ -18,7 +18,10 @@ class CfgSounds
 
 
 class Extended_InitPost_EventHandlers {
-	class AllVehicles {
+	class LandVehicle {
+		init = "(_this select 0) call diwako_playableDog_fnc_addVehicleAction;";
+	};
+	class Air {
 		init = "(_this select 0) call diwako_playableDog_fnc_addVehicleAction;";
 	};
 };
