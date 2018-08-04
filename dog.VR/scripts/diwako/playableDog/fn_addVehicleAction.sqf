@@ -42,4 +42,4 @@ private _action = ["diw_dog_getIn","Get in vehicle","",{
   player playMove "Dog_Sit";
 },{(player isKindOf 'Dog_Base_F') && {!(player getVariable["diwako_dog_inVehicle",false])}}] call ace_interact_menu_fnc_createAction;
 
-[typeOf _veh, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToClass;
+[_veh, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
