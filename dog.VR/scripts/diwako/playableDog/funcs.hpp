@@ -5,5 +5,7 @@ class diwako_playableDog{
 		class init{postInit = 1;};
 		class becomeDog{};
 		class addVehicleAction{};
+		class addUnitAction{};
+		class addDogAction{};
 	};
 };

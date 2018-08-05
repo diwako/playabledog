@@ -24,4 +24,10 @@ class Extended_InitPost_EventHandlers {
 	class Air {
 		init = "(_this select 0) call diwako_playableDog_fnc_addVehicleAction;";
 	};
+	class CAManBase {
+		init = "(_this select 0) call diwako_playableDog_fnc_addUnitAction;";
+	};
+	class Dog_Base_F {
+		init = "(_this select 0) call diwako_playableDog_fnc_addDogAction;";
+	};
 };

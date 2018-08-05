@@ -1,9 +1,18 @@
 if(!hasInterface) exitWith {};
 params[["_type","random"],["_owner",objNull],["_allowNvg",true]];
 waitUntil { !isNil 'diwako_dogInit' };
+
+if(_type == "random") then {
+  if(floor (random 2) == 0) then {
+    _type = "Alsatian_Random_F";
+  }else{
+    _type = "Fin_random_F";
+  };
+};
+
 camDestroy (missionnamespace getVariable ["personalCam",objNull]);
 oldPlayer = player;
-doggo = (group player) createUnit ["ALSATIAN_BLACK_F", position player, [], 0, "FORM"];
+doggo = (group player) createUnit [_type, position player, [], 0, "FORM"];
 // doggo = (createGroup [east, true]) createUnit ["ALSATIAN_BLACK_F", position player, [], 0, "FORM"];
 addSwitchableUnit doggo;
 selectPlayer doggo;
@@ -43,29 +52,15 @@ doggo addEventHandler ["Killed",{
   };
 }];
 
-// get rid of ace medical
+// get rid of ace medical also disable all other actions
 [{
   doggo removeAllEventHandlers "HandleDamage";
   doggo addEventHandler ["HandleDamage",{
     params ["_dog", "_selection", "_damage", "_source", "_projectile", "_hitIndex", "_instigator", "_hitPoint"];
     if!(alive _dog) exitWith {1};
-    // systemChat str _this;
-    // if ((_projectile != '')) then { //and !(isnull _source )) then {
-    //   private _hits = _dog getVariable ["diw_dog_hit",0];
-    //   _hits = _hits + 1;
-    //   if (_hits > diw_dog_max_hit) then {
-    //           _dog setdamage 1;
-    //       };
-    //   if((alive _dog) && ((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time)) then {
-    //     diw_dogBark = time + 1.5  + (random 1);
-    //     [_dog, "hurt_" + str( (floor random 2) + 1 )] remoteExec ["say3D"];
-    //   };
-    //   _dog setVariable ["diw_dog_hit",_hits,true];
-    // };
-    // 0
     (damage _dog + (_damage / 50));
   }];
-  systemChat "damage handler applied";
+  doggo setVariable ["ace_dragging_isDragging",true,true];
 },[],2] call CBA_fnc_waitAndExecute;
 
 diw_dog_mouse_eh = (findDisplay 46) displayAddEventHandler ["MouseButtonDown", {
@@ -73,7 +68,7 @@ diw_dog_mouse_eh = (findDisplay 46) displayAddEventHandler ["MouseButtonDown", {
 
   // mouse 1
   if (_key == 0) then {
-    if(player getVariable["diwako_dog_inVehicle",false]) exitWith {};
+    if((player getVariable["diwako_dog_inVehicle",false]) || (player getVariable ["diwako_dog_dragging", false])) exitWith {};
     if((missionNamespace getVariable ['diw_bitetime',(time-1)]) > time) exitWith {};
     diw_bitetime = time + 1;
 
@@ -140,6 +135,7 @@ diw_dog_mouse_eh = (findDisplay 46) displayAddEventHandler ["MouseButtonDown", {
 
 diw_dog_key_eh = (findDisplay 46) displayAddEventHandler ["KeyDown", {
   if!(player isKindOf 'Dog_Base_F') exitWith {};
+  if(player getVariable ["diwako_dog_dragging", false]) exitWith {};
   params ["_control", "_key", "_shift", "_ctrl", "_alt"];
   if(_key in actionKeys "nightVision" && {doggo getVariable ["diwako_dog_allowNvg", false] && {(missionNamespace getVariable ["diwako_dog_nvg_time",(time-0.5)]) < time}}) then {
     if(isNil "diwako_dog_nvg") then {
@@ -185,17 +181,25 @@ private _action = ["diw_dog_getOut","Get out vehicle","",{
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
+private _action = ["diw_dog_drop","Drop","",{
+  [player, (player getVariable ["diwako_dog_draggedObject",objNull])] call ace_dragging_fnc_dropObject;
+  player setVariable ["ace_dragging_isDragging", true, true];
+  player setVariable ["diwako_dog_dragging",false,true];
+},{(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
+
+[doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
+
 _action = ["diw_dog_howl","Howl","",{
   diw_dogBark = time + 10;
   player playmove "Dog_Idle_Growl";
   [player, ["howl" + str(floor random 2),500,1]] remoteExec ["say3D"];
-},{((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time) && !(player getVariable["diwako_dog_inVehicle",false])}] call ace_interact_menu_fnc_createAction;
+},{((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time) && !(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
 _action = ["diw_dog_sit","Sit down","",{
   player playMove "Dog_Sit";
-},{true}] call ace_interact_menu_fnc_createAction;
+},{!(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
@@ -203,7 +207,7 @@ _action = ["diw_dog_excited","Get Excited","",{
   player playMove "Dog_Idle_Bark";
   [player, "idle_" + str (floor random 2)] remoteExec ["say3d"];
   [player, "idle_" + str ((floor random 3) + 2)] remoteExec ["say3d"];
-},{!(player getVariable["diwako_dog_inVehicle",false])}] call ace_interact_menu_fnc_createAction;
+},{!(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
@@ -217,7 +221,7 @@ _action = ["diw_turn_off_smellovision","Disable Smell-o-Vison","",{
 
 _action = ["diw_dog_growl","Growl","",{
   player playMoveNow "Dog_Idle_Growl";
-},{((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time) && !(player getVariable["diwako_dog_inVehicle",false])}] call ace_interact_menu_fnc_createAction;
+},{((missionNamespace getVariable ['diw_dogBark',(time-1)]) < time) && !(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
@@ -246,7 +250,7 @@ _action = ["diw_turn_on_smellovision","Enable Smell-o-Vison","",{
       drawIcon3D ["\A3\ui_f\data\map\markers\military\triangle_CA.paa", [0,1,0,1], _posIcon, 0.5, 0.5, 0, "Owner"];
     };
   }];
-},{isNil 'visoreh' && !(player getVariable["diwako_dog_inVehicle",false])}] call ace_interact_menu_fnc_createAction;
+},{isNil 'visoreh' && !(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
@@ -265,6 +269,7 @@ _action = ["diw_dog_fixcamera","Fix camera","",{
   };
   false setCamUseTi 0;
   camUseNVG false;
+  doggo setVariable ["ace_dragging_isDragging",true,true];
 },{true}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
