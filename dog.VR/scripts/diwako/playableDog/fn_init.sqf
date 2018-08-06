@@ -23,3 +23,9 @@ if(!hasInterface) exitWith {};
 };
 
 // ["isNotDog", {player isKindOf "CAManBase"}] call ace_common_fnc_addCanInteractWithCondition;
+
+private _action = ["diw_dog_carry","Drop dog","",{
+  player setVariable ["diwako_dog_carryDog",false,true];
+},{player getVariable ["diwako_dog_carryDog",false]}] call ace_interact_menu_fnc_createAction;
+
+[typeOf player, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToClass;

@@ -48,6 +48,7 @@ doggo addEventHandler ["Killed",{
     camUseNVG false;
     selectPlayer oldPlayer;
     diwako_dog_nvg = false;
+    deleteVehicle attachEnemy;
     oldPlayer setDamage 1;
   };
 }];
@@ -199,7 +200,7 @@ _action = ["diw_dog_howl","Howl","",{
 
 _action = ["diw_dog_sit","Sit down","",{
   player playMove "Dog_Sit";
-},{!(player getVariable ["diwako_dog_dragging", false])}] call ace_interact_menu_fnc_createAction;
+},{!(player getVariable ["diwako_dog_dragging", false]) && {!(player getVariable ["diwako_dog_isCarried", false])}}] call ace_interact_menu_fnc_createAction;
 
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 

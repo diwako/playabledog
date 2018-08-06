@@ -36,3 +36,23 @@ _action = ["diw_dog_heal","Heal dog","",{
 },{alive _target && {(damage _target) > 0}}] call ace_interact_menu_fnc_createAction;
 
 [_dog, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
+
+_action = ["diw_dog_carry","Carry dog","",{
+	_target attachTo[player,[-0.15,-0.15,-0.25],"spine3"];
+  _target setDir 90;
+  _target setVariable ["diwako_dog_isCarried",true,true];
+  player setVariable ["diwako_dog_carryDog",true,true];
+  [{
+    params ["_args", "_idPFH"];
+    _args params ["_unit", "_target", "_timeOut"];
+    
+    if (!alive _target || {!(_unit getVariable ["diwako_dog_carryDog", false]) ||{!(isNull objectParent _unit) || {!(alive _unit) || {(_unit getVariable["ace_unconscious",false])}}}}) then {
+      [_unit, _target] call ace_dragging_fnc_dropObject;
+      _target setVariable ["diwako_dog_isCarried",false,true];
+      _unit setVariable ["diwako_dog_carryDog",false,true];
+      [_idPFH] call CBA_fnc_removePerFrameHandler;
+    };
+  }, 0.2, [player, _target]] call CBA_fnc_addPerFrameHandler;
+},{alive _target && {!(player getVariable ["diwako_dog_carryDog",false]) && {!(_target getVariable ["diwako_dog_isCarried", false])}}}] call ace_interact_menu_fnc_createAction;
+
+[_dog, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
