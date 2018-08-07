@@ -30,4 +30,7 @@ class Extended_InitPost_EventHandlers {
 	class Dog_Base_F {
 		init = "(_this select 0) call diwako_playableDog_fnc_addDogAction;";
 	};
+	class ace_advanced_throwing_pickUpHelper {
+		init = "(_this select 0) call diwako_playableDog_fnc_addVehicleAction;";
+	};
 };

@@ -22,7 +22,7 @@ _action = ["diw_dog_checkhealth","Check health","",{
     if(_dam < 0.75 ) exitWith {titleText ["The dog is heavily wounded","PLAIN DOWN"]};
     titleText ["The dog is near death","PLAIN DOWN"];
   },[_target],0.5] call CBA_fnc_waitAndExecute;
-},{true}] call ace_interact_menu_fnc_createAction;
+},{(_target getVariable ["diwako_dog", false])}] call ace_interact_menu_fnc_createAction;
 
 [_dog, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
@@ -33,7 +33,7 @@ _action = ["diw_dog_heal","Heal dog","",{
     _dog setDamage 0;
     // _dog setVariable ["diw_dog_hit", 0 ,true];
   },[_target],1.5] call CBA_fnc_waitAndExecute;
-},{alive _target && {(damage _target) > 0}}] call ace_interact_menu_fnc_createAction;
+},{(_target getVariable ["diwako_dog", false]) && alive _target && {(damage _target) > 0}}] call ace_interact_menu_fnc_createAction;
 
 [_dog, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
@@ -53,6 +53,18 @@ _action = ["diw_dog_carry","Carry dog","",{
       [_idPFH] call CBA_fnc_removePerFrameHandler;
     };
   }, 0.2, [player, _target]] call CBA_fnc_addPerFrameHandler;
-},{alive _target && {!(player getVariable ["diwako_dog_carryDog",false]) && {!(_target getVariable ["diwako_dog_isCarried", false])}}}] call ace_interact_menu_fnc_createAction;
+},{(_target getVariable ["diwako_dog", false]) && alive _target && {!(player getVariable ["diwako_dog_carryDog",false]) && {!(_target getVariable ["diwako_dog_isCarried", false]) && {!(_target getVariable ["diwako_dog_inVehicle", false]) && {!(player isKindOf "Dog_Base_F")}}}}}] call ace_interact_menu_fnc_createAction;
+
+[_dog, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
+
+_action = ["diw_dog_checkName","Check dog collar","",{
+	private _text = "On the collar it says this dog ";
+  if(alive _target) then {
+    _text = _text + "is named %1.";
+  } else {
+    _text = _text + "was named %1.";
+  };
+  titleText [format[_text, (_target getVariable ["diwako_dog_name", name _target])],"PLAIN DOWN"];
+},{(_target getVariable ["diwako_dog_name", ""]) != ""}] call ace_interact_menu_fnc_createAction;
 
 [_dog, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;

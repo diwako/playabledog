@@ -1,6 +1,14 @@
 if!(hasInterface) exitWith {};
 params ["_veh"];
 
+if(_veh isKindOf "ace_advanced_throwing_pickUpHelper") exitWith {
+  private _action = ["diw_dog_pickUp","Pick up","\a3\ui_f\data\igui\cfg\actions\obsolete\ui_action_takemine_ca.paa",{
+    [_target, player] call ace_advanced_throwing_fnc_pickUp;
+  },{(player isKindOf 'Dog_Base_F') && {!(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_isCarried", false]) && {isNull (player getVariable ["ace_advanced_throwing_activeThrowable", objNull])}}}] call ace_interact_menu_fnc_createAction;
+
+  [_veh, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;
+};
+
 private _action = ["diw_dog_getIn","Get in vehicle","",{
   if(!isNil "visoreh") then {
     switchCamera player;
@@ -40,6 +48,6 @@ private _action = ["diw_dog_getIn","Get in vehicle","",{
   player attachTo [_target,_pos];
   player setDir _dir;
   player playMove "Dog_Sit";
-},{(player isKindOf 'Dog_Base_F') && {!(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_isCarried", false])}}] call ace_interact_menu_fnc_createAction;
+},{(player isKindOf 'Dog_Base_F') && ((damage _target) < 1) && {!(player getVariable["diwako_dog_inVehicle",false]) && !(player getVariable ["diwako_dog_isCarried", false])}}] call ace_interact_menu_fnc_createAction;
 
 [_veh, 0, ["ACE_MainActions"], _action] call ace_interact_menu_fnc_addActionToObject;

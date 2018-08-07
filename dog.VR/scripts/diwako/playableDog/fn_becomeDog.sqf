@@ -1,5 +1,5 @@
 if(!hasInterface) exitWith {};
-params[["_type","random"],["_owner",objNull],["_allowNvg",true]];
+params[["_type","random"],["_owner",objNull],["_name",(name player)],["_allowNvg",true]];
 waitUntil { !isNil 'diwako_dogInit' };
 
 if(_type == "random") then {
@@ -14,6 +14,8 @@ camDestroy (missionnamespace getVariable ["personalCam",objNull]);
 oldPlayer = player;
 doggo = (group player) createUnit [_type, position player, [], 0, "FORM"];
 // doggo = (createGroup [east, true]) createUnit ["ALSATIAN_BLACK_F", position player, [], 0, "FORM"];
+doggo setVariable ["diwako_dog", true, true];
+doggo setVariable ["diwako_dog_name", _name, true];
 addSwitchableUnit doggo;
 selectPlayer doggo;
 doggo setVariable ["BIS_fnc_animalBehaviour_disable", true, true];
@@ -59,62 +61,133 @@ doggo addEventHandler ["Killed",{
   doggo addEventHandler ["HandleDamage",{
     params ["_dog", "_selection", "_damage", "_source", "_projectile", "_hitIndex", "_instigator", "_hitPoint"];
     if!(alive _dog) exitWith {1};
-    (damage _dog + (_damage / 50));
+    if(isNil "diwako_dog_last_hit") then {
+      diwako_dog_last_hit = -1;
+    };
+    if(_damage > 10 || {_damage > 0.1 && ((diwako_dog_last_hit + 0.5) < time)}) then {
+      diwako_dog_last_hit = time;
+      [_damage] spawn {
+        params["_damage"];
+        private _effect = [_damage];
+        if(isNil "diwako_dog_damage_blur") then {
+          private _name = "DynamicBlur";
+          private _priority = 400;
+          diwako_dog_damage_blur = ppEffectCreate [_name, _priority];
+          while {
+            diwako_dog_damage_blur < 0
+          } do {
+            _priority = _priority + 1;
+            diwako_dog_damage_blur = ppEffectCreate [_name, _priority];
+          };
+          diwako_dog_damage_blur ppEffectEnable true;
+        };
+        diwako_dog_damage_blur ppEffectAdjust _effect;
+        diwako_dog_damage_blur ppEffectCommit 0;
+        diwako_dog_damage_blur ppEffectAdjust [0];
+        diwako_dog_damage_blur ppEffectCommit 0.5;
+      };
+      if(_damage > 10) then {
+        [] spawn {
+          if(isNil "diwako_dog_damage_blink") then {
+            private _name = "ColorCorrections";
+            private _priority = 400;
+            diwako_dog_damage_blink = ppEffectCreate [_name, _priority];
+            while {
+              diwako_dog_damage_blink < 0
+            } do {
+              _priority = _priority + 1;
+              diwako_dog_damage_blink = ppEffectCreate [_name, _priority];
+            };
+            diwako_dog_damage_blink ppEffectEnable true;
+          };
+          _h1 = 0.24;
+          _h2 = 0.24;
+          for "_i" from 0 to 75 step 1 do {
+            _h1 = _h1 + 0.01;
+            _h2 = _h2 + 0.01;
+            diwako_dog_damage_blink ppEffectAdjust [1,1,0,[0,0,0,1],[1,1,1,1],[0.33,0.33,0.33,0],[_h1,_h2,0,0,0,0,4]];
+            diwako_dog_damage_blink ppEffectCommit 0;
+            sleep 0.01; 
+          };
+          diwako_dog_damage_blink ppEffectAdjust [1,1,0,[0,0,0,0],[1,1,1,1],[0.33,0.33,0.33,0],[0,0,0,0,0,0,4]];
+          diwako_dog_damage_blink ppEffectCommit 0;
+        };
+      };
+    };
+    if((missionNamespace getVariable ['diw_dogBark',-1]) < time) then {
+      diw_dogBark = time + 1.5  + (random 1);
+      [_dog, "hurt_" + str( (floor random 2) + 1 )] remoteExec ["say3D"];
+    };
+
+    (damage _dog + (_damage / 50))
   }];
   doggo setVariable ["ace_dragging_isDragging",true,true];
 },[],2] call CBA_fnc_waitAndExecute;
 
 diw_dog_mouse_eh = (findDisplay 46) displayAddEventHandler ["MouseButtonDown", {
+  if!(alive doggo) exitWith {};
   private _key = (_this select 1);
 
-  // mouse 1
+  // mouse 1 - Bite
   if (_key == 0) then {
     if((player getVariable["diwako_dog_inVehicle",false]) || (player getVariable ["diwako_dog_dragging", false])) exitWith {};
-    if((missionNamespace getVariable ['diw_bitetime',(time-1)]) > time) exitWith {};
+    if((missionNamespace getVariable ['diw_bitetime',-1]) > time) exitWith {};
+    if!(isNull (player getVariable ["ace_advanced_throwing_activeThrowable", objNull])) exitWith {};
     diw_bitetime = time + 1;
 
     private _pos = player modelToWorld [0,2,-1];
-    private _units = (allUnits - [player]) inAreaArray [_pos, 2, 2, (getdir player) + 45, true, 3];
+    private _units = ((entities  [["Man"], [], true, false]) - [player]) inAreaArray [_pos, 2, 2, (getdir player) + 45, true, 3];
+    // private _units = (allUnits - [player]) inAreaArray [_pos, 2, 2, (getdir player) + 45, true, 3];
     private _target = objNull;
     {
-      if(alive _x && (_x isKindOf "CAManBase") && {((_x distance player) < 2.5)}) exitWith {
+      if(alive _x && (_x isKindOf "Man") && {((_x distance player) < 2.5)}) exitWith {
         _target = _x;
       };
       false
     } count _units;
-    if(alive doggo && !(isNull _target) && {isNull objectParent _target}) then {
+    if(!(isNull _target) && {isNull objectParent _target}) then {
       systemChat "chompped!";
+      if(_target isKindOf "CAManBase") then {
+        private _sel = [
+        "head", 0.1,
+        "body", 0.1,
+        "hand_l", 0.2,
+        "hand_r", 0.2,
+        "leg_l", 0.2,
+        "leg_r", 0.2
+        ] call BIS_fnc_selectRandomWeighted;
 
-      private _sel = [
-      "head", 0.1,
-      "body", 0.1,
-      "hand_l", 0.2,
-      "hand_r", 0.2,
-      "leg_l", 0.2,
-      "leg_r", 0.2
-      ] call BIS_fnc_selectRandomWeighted;
-
-      private _dam = 0.2 + random (switch (_sel) do {
-      case "head": {0.2};
-      case "body": {0.4};
-      case "leg_l";
-      case "leg_r";
-      case "hand_l";
-      case "hand_r"; {0.5};
-      default {0}
-      });
-      _dam = _dam * (missionNamespace getVariable ["ace_medical_playerDamageThreshold", 1]);
-      [_target, _dam, _sel, "stab"] remoteExec ["ace_medical_fnc_addDamageToUnit", _target];
-      [_target,"MIDDLE"] remoteExec ["setUnitPos",_target];
-      [{
-        params ["_target"];
-        _snd = selectRandom ["WoundedGuyB_05", "WoundedGuyB_06", "WoundedGuyB_07","WoundedGuyB_08","WoundedGuyA_08","WoundedGuyA_07","WoundedGuyA_06"];
-        [_target, [_snd,100,1]] remoteExecCall ["say3D"];
-        if(random 2 < 1) then {
-          // 50% chance to knock unit out
-          [_target, true,round(random(15)+5),true] call ace_medical_fnc_setUnconscious;
-        }
-      }, [_target], 0.2] call CBA_fnc_waitAndExecute;
+        private _dam = 0.2 + random (switch (_sel) do {
+        case "head": {0.2};
+        case "body": {0.4};
+        case "leg_l";
+        case "leg_r";
+        case "hand_l";
+        case "hand_r"; {0.5};
+        default {0}
+        });
+        _dam = _dam * (missionNamespace getVariable ["ace_medical_playerDamageThreshold", 1]);
+        [_target, _dam, _sel, "stab"] remoteExec ["ace_medical_fnc_addDamageToUnit", _target];
+        [_target,"MIDDLE"] remoteExec ["setUnitPos",_target];
+        [{
+          params ["_target"];
+          _snd = selectRandom ["WoundedGuyB_05", "WoundedGuyB_06", "WoundedGuyB_07","WoundedGuyB_08","WoundedGuyA_08","WoundedGuyA_07","WoundedGuyA_06"];
+          [_target, [_snd,100,1]] remoteExecCall ["say3D"];
+          if(random 2 < 1) then {
+            // 50% chance to knock unit out
+            [_target, true,round(random(15)+5),true] call ace_medical_fnc_setUnconscious;
+          }
+        }, [_target], 0.2] call CBA_fnc_waitAndExecute;
+      } else {
+        private _dam = _target call {
+          if(_this isKindOf "Fowl_Base_F") exitWith {1};
+          if(_this isKindOf "Dog_Base_F") exitWith {0.1};
+          if(_this isKindOf "Goat_Base_F") exitWith {0.25};
+          if(_this isKindOf "Sheep_random_F") exitWith {0.25};
+          1
+        };
+        _target setDamage ((damage _target) + _dam);
+      };
     };
   };
 
@@ -162,18 +235,29 @@ diw_dog_key_eh = (findDisplay 46) displayAddEventHandler ["KeyDown", {
 
 visorTargets = [];
 visorMines = [];
+visorAnimals = [];
 
 [] spawn {
   while {player isKindOf "Dog_Base_F"} do {
-    private _men = entities  [["CAManBase"], [], true, false];
-    visorTargets = _men select { (player distance _x) < 300};
+    private _men = entities  [["Man"], [], true, false];
+    _men = _men select {(player distance _x) < 300};
+    visorTargets = _men select {_x isKindOf "CAManBase"};
+    visorAnimals = _men select {!(_x isKindOf "CAManBase")};
     visorTargets = visorTargets - [(player getVariable ["diwako_dog_owner",objNull])];
+    visorAnimals = visorAnimals - [player];
     visorMines = allMines select { (player distance2D _x) <= 25};
     sleep 5;
   };
 };
 
-private _action = ["diw_dog_getOut","Get out vehicle","",{
+private _action = ["diw_dog_dropNade","Drop throwable","",{
+  [player, "Doggo drop that nade, BAD!"] call ace_advanced_throwing_fnc_exitThrowMode;
+  player setVariable ["ace_advanced_throwing_activeThrowable", objNull];
+},{!isNull (player getVariable ["ace_advanced_throwing_activeThrowable", objNull])}] call ace_interact_menu_fnc_createAction;
+
+[doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
+
+_action = ["diw_dog_getOut","Get out vehicle","",{
   player setVariable["diwako_dog_inVehicle",false,true];
   private _pos = (player getVariable "diwako_dog_vehicle") modelToWorld [5,0,0];
   detach player;
@@ -235,11 +319,16 @@ _action = ["diw_turn_on_smellovision","Enable Smell-o-Vison","",{
   visoreh = addMissionEventHandler ["Draw3D",{
     private _posIcon = [0,0,0];
     {
-      private _alive = (alive _x);
+      private _alive = !(!(alive _x) || {(_x getVariable ["ace_medical_pain", 0] > 0.2) || {[_x] call ace_medical_fnc_getBloodLoss > 0 || {_x getVariable ["ACE_isUnconscious", false]}}});
       _posIcon = _x modelToWorldVisual (_x selectionPosition "pelvis");
-      drawIcon3D ["\A3\ui_f\data\map\markers\military\triangle_CA.paa", diw_dog_human_color select _alive, _posIcon, 0.5, 0.5, 0, ["Human (dead)","Human"] select _alive];
+      // drawIcon3D ["\A3\ui_f\data\map\markers\military\triangle_CA.paa", diw_dog_human_color select _alive, _posIcon, 0.5, 0.5, 0, ["Human (dead)","Human"] select _alive];
+      drawIcon3D ["\A3\ui_f\data\map\markers\military\triangle_CA.paa", diw_dog_human_color select _alive, _posIcon, 0.5, 0.5, 0, ["Human (wounded)","Human"] select _alive];
       false
     } count visorTargets;
+    {
+      _posIcon = getPosATLVisual _x;
+      drawIcon3D ["\A3\ui_f\data\map\vehicleicons\iconAnimal_ca.paa", [0,1,0,1], _posIcon, 0.5, 0.5, 0, "Animal"];
+    } count visorAnimals;
     {
       _posIcon = getPosATLVisual _x;
       drawIcon3D ["\A3\ui_f\data\map\vehicleicons\iconExplosiveAP_ca.paa", [1,0,0,1], _posIcon, 1, 1, 0, "Explosive"];
@@ -257,7 +346,19 @@ _action = ["diw_turn_on_smellovision","Enable Smell-o-Vison","",{
 
 doggo setVariable ["diwako_dog_allowNvg",_allowNvg];
 
+_action = ["diw_dog_selfhealthcheck","Check own health","",{
+  private _dam = damage player;
+  if(_dam == 0) exitWith {titleText ["Good health","PLAIN DOWN"]};
+  if(_dam < 0.25) exitWith {titleText ["Some damage","PLAIN DOWN"]};
+  if(_dam < 0.5 ) exitWith {titleText ["Wounded","PLAIN DOWN"]};
+  if(_dam < 0.75 ) exitWith {titleText ["Heavily wounded","PLAIN DOWN"]};
+  titleText ["Near death","PLAIN DOWN"];
+},{true}] call ace_interact_menu_fnc_createAction;
+
+[doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
+
 _action = ["diw_dog_fixcamera","Fix camera","",{
+  [player, ""] remoteExec ["switchmove"]
   switchCamera player;
   camDestroy (missionnamespace getVariable ["personalCam",objNull]);
   personalCam = "camera" camCreate (position player);

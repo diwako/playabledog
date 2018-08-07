@@ -5,6 +5,7 @@ if!(_unit isKindOf "CAManBase") exitWith {};
 _action = ["diw_dog_lick","Lick hand","",{
   diw_dogBark = time + 5;
   player playmove "Dog_Idle_Growl";
+  [player, _target, 0] call ace_interaction_fnc_tapShoulder;
   [[format["A dog licked your hand"],"PLAIN DOWN"]] remoteExec ["titleText", _target];
 },{alive _target && {(player isKindOf "Dog_Base_F") && {(missionNamespace getVariable ['diw_dogBark',(time-1)]) < time}}}] call ace_interact_menu_fnc_createAction;
 
