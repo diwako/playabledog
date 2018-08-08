@@ -32,6 +32,7 @@ doggo addEventHandler ["Killed",{
     switchCamera player;
     detach player;
     camDestroy (missionnamespace getVariable ["personalCam",objNull]);
+    deleteVehicle (missionnamespace getVariable ["diwako_dog_drone",objNull]);
     if(!isNil "visoreh") then {
       removeMissionEventHandler ["Draw3D",visoreh];
       visoreh = nil;
@@ -66,6 +67,10 @@ doggo addEventHandler ["Killed",{
     };
     if(_damage > 10 || {_damage > 0.1 && ((diwako_dog_last_hit + 0.5) < time)}) then {
       diwako_dog_last_hit = time;
+      if((missionNamespace getVariable ['diw_dogBark',-1]) < time) then {
+        diw_dogBark = time + 1.5  + (random 1);
+        [_dog, "hurt_" + str( (floor random 2) + 1 )] remoteExec ["say3D"];
+      };
       [_damage] spawn {
         params["_damage"];
         private _effect = [_damage];
@@ -107,16 +112,12 @@ doggo addEventHandler ["Killed",{
             _h2 = _h2 + 0.01;
             diwako_dog_damage_blink ppEffectAdjust [1,1,0,[0,0,0,1],[1,1,1,1],[0.33,0.33,0.33,0],[_h1,_h2,0,0,0,0,4]];
             diwako_dog_damage_blink ppEffectCommit 0;
-            sleep 0.01; 
+            sleep 0.01;
           };
           diwako_dog_damage_blink ppEffectAdjust [1,1,0,[0,0,0,0],[1,1,1,1],[0.33,0.33,0.33,0],[0,0,0,0,0,0,4]];
           diwako_dog_damage_blink ppEffectCommit 0;
         };
       };
-    };
-    if((missionNamespace getVariable ['diw_dogBark',-1]) < time) then {
-      diw_dogBark = time + 1.5  + (random 1);
-      [_dog, "hurt_" + str( (floor random 2) + 1 )] remoteExec ["say3D"];
     };
 
     (damage _dog + (_damage / 50))
@@ -358,7 +359,7 @@ _action = ["diw_dog_selfhealthcheck","Check own health","",{
 [doggo, 1, ["ACE_SelfActions"], _action] call ace_interact_menu_fnc_addActionToObject;
 
 _action = ["diw_dog_fixcamera","Fix camera","",{
-  [player, ""] remoteExec ["switchmove"]
+  [player, ""] remoteExec ["switchmove"];
   switchCamera player;
   camDestroy (missionnamespace getVariable ["personalCam",objNull]);
   personalCam = "camera" camCreate (position player);
@@ -384,3 +385,32 @@ private _safepos = [[0,0,0], 0, 50000, 1, 0, 0.7, 0, [], [[0,0,0], [0,0,0]]] cal
 oldPlayer setPos _safepos;
 oldPlayer disableAI "ALL";
 oldPlayer setVariable ["acex_headless_blacklist", true, true]; // please stay local
+
+// attach some drone to the dog so AI will shoot at it
+private _droneClass = (side group oldPlayer) call {
+  if(_this == independent) exitWith {"I_UAV_06_F"};
+  if(_this == opfor) exitWith {"O_UAV_06_F"};
+  if(_this == blufor) exitWith {"B_UAV_06_F"};
+  ""
+};
+systemChat ("class " + _droneClass);
+if(_droneClass != "") then {
+  // diwako_dog_drone = (createGroup [(side group oldPlayer),true]) createUnit [_droneClass, position player, [], 0, "FORM"];
+  diwako_dog_drone = createVehicle [_droneClass, getPos player, [], 0,""];
+  createVehicleCrew diwako_dog_drone;
+  {
+    _x setVariable ["acex_headless_blacklist", true, true]; // please stay local
+    _x disableAI "ALL";
+    [_x,false] remoteExec ["enableSimulationGlobal",2];
+    false
+  } count (crew diwako_dog_drone);
+  diwako_dog_drone lock true;
+  diwako_dog_drone allowDamage false;
+  diwako_dog_drone attachTo [doggo,[0,-0.4,-0.3],"head"];
+  diwako_dog_drone setObjectTexture [0,""];
+  [diwako_dog_drone,{
+    player disableCollisionWith _this;
+    _this disableCollisionWith player;
+    }] remoteExec ["call",0,diwako_dog_drone];
+  // [diwako_dog_drone,false] remoteExec ["enableSimulationGlobal",2];
+};
