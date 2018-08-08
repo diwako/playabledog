@@ -19,8 +19,6 @@ private _action = ["diw_dog_getIn","Get in vehicle","",{
     removeMissionEventHandler ["Draw3D",visoreh];
     visoreh = nil;
   };
-  player setVariable["diwako_dog_inVehicle",true,true];
-  player setVariable["diwako_dog_vehicle", _target];
   private _attachParams = _target call {
     if(_this isKindOf "Offroad_02_LMG_base_F") exitWith {[[0.25,-1.4,-1.35],90]};
     if(_this isKindOf "Offroad_02_base_F") exitWith {[[0.25,-1.4,-0.7],90]};
@@ -44,6 +42,8 @@ private _action = ["diw_dog_getIn","Get in vehicle","",{
     nil
   };
   if(isNil "_attachParams") exitWith {titleText ["Cannot mount that vehicle as dog","PLAIN DOWN"]};
+  player setVariable["diwako_dog_inVehicle",true,true];
+  player setVariable["diwako_dog_vehicle", _target];
   _attachParams params ["_pos","_dir"];
   player attachTo [_target,_pos];
   player setDir _dir;

@@ -32,6 +32,9 @@ doggo addEventHandler ["Killed",{
     switchCamera player;
     detach player;
     camDestroy (missionnamespace getVariable ["personalCam",objNull]);
+    {
+      deleteVehicle _x;
+    } count (crew (missionnamespace getVariable ["diwako_dog_drone",objNull]));
     deleteVehicle (missionnamespace getVariable ["diwako_dog_drone",objNull]);
     if(!isNil "visoreh") then {
       removeMissionEventHandler ["Draw3D",visoreh];

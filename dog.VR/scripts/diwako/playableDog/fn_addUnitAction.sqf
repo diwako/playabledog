@@ -29,7 +29,7 @@ _action = ["diw_dog_drag","Drag","",{
       [_idPFH] call CBA_fnc_removePerFrameHandler;
     };
     
-    if (!alive _target || {_unit distance _target > 10}) then {
+    if (!alive _target || {_unit distance _target > 10 || {!(_unit getVariable["ACE_isUnconscious",false])}}) then {
       [_unit, _target] call ace_dragging_fnc_dropObject;
       _unit setVariable ["ace_dragging_isDragging", true, true];
       _unit setVariable ["diwako_dog_dragging",false,true];
